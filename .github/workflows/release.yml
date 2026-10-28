@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build & Publish Release
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Determine Version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Building CleanShot version ${VERSION}"
+
+      - name: Run Test Suite
+        run: |
+          swift test
+
+      - name: Package DMG and ZIP
+        run: |
+          bash scripts/package_dmg.sh "${{ steps.get_version.outputs.version }}"
+
+      - name: Generate Release Notes & Summary
+        id: release_notes
+        run: |
+          cat << 'EOF' > RELEASE_NOTES.md
+          ### What's New in CleanShot ${{ steps.get_version.outputs.version }}
+
+          CleanShot is an advanced, native macOS screenshot, screen recording, annotation, and productivity utility built purely in Swift.
+
+          #### Highlights
+          - **Capture Suite:** Area selection with 8x magnifier loupe, window detection, freeze screen, fullscreen, and scrolling capture.
+          - **Quick Access Overlay:** Floating HUD preview with 1-click actions (Copy, Save, Pin, Annotate, Delete) and instant drag-and-drop.
+          - **Vector Annotation Studio:** Draw arrows, shapes, text, auto-incrementing step numbers, highlighters, and blur/pixelate redactions.
+          - **Background Styler:** Add gradients, drop shadows, and clean framing to screenshots.
+          - **Screen & Audio Recording:** ScreenCaptureKit 60 FPS recording with internal audio loopback, microphone input, and webcam bubble overlay.
+          - **Productivity Tools:** Instant on-device Apple Vision OCR and QR scanner, plus desktop clutter hider.
+
+          #### Installation Instructions
+          1. Download **`CleanShot.dmg`** below.
+          2. Double-click the DMG to open it.
+          3. **Drag `CleanShot.app` into the `Applications` shortcut.** *(Do not run directly from inside the DMG).*
+          4. Open CleanShot from your `/Applications` folder or Spotlight.
+          5. If macOS displays a Gatekeeper prompt on first launch, right-click `CleanShot.app` -> **Open**, or run:
+             ```bash
+             xattr -cr /Applications/CleanShot.app
+             ```
+
+          #### Verification
+          Verify package integrity using the provided SHA-256 checksums:
+          ```bash
+          shasum -a 256 CleanShot.dmg
+          ```
+          EOF
+
+      - name: Create GitHub Release & Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.get_version.outputs.version) }}
+          name: CleanShot v${{ steps.get_version.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
+          files: |
+            build/CleanShot*.dmg
+            build/CleanShot*.zip
+            build/*.sha256

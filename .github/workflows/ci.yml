@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-and-build:
+    name: Test & Build CleanShot
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Show Swift & macOS Environment
+        run: |
+          sw_vers
+          swift --version
+          xcodebuild -version
+
+      - name: Run Test Suite & Benchmarks
+        run: |
+          swift test -v
+
+      - name: Bundle CleanShot.app
+        run: |
+          bash scripts/bundle_app.sh
+
+      - name: Verify Bundle Integrity
+        run: |
+          test -f build/CleanShot.app/Contents/MacOS/CleanShot
+          test -f build/CleanShot.app/Contents/Info.plist
+          codesign -v build/CleanShot.app
+          echo "App bundle verified and codesigned successfully."
