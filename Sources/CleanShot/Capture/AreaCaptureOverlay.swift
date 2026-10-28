@@ -20,9 +20,9 @@ public final class AreaCaptureOverlayWindow: NSWindow {
             contentRect: snapshot.frame,
             styleMask: [.borderless],
             backing: .buffered,
-            defer: false,
-            screen: snapshot.screen
+            defer: false
         )
+        self.setFrame(snapshot.frame, display: true)
 
         self.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.screenSaverWindow)) - 1)
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]

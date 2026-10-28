@@ -121,4 +121,35 @@ final class CleanShotTests: XCTestCase {
         XCTAssertEqual(renderedImage?.width, 200)
         XCTAssertEqual(renderedImage?.height, 200)
     }
+
+    // MARK: - Overlay Window Tests
+
+    @MainActor
+    func testAreaCaptureOverlayWindowInitialization() {
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let context = CGContext(
+            data: nil,
+            width: 100,
+            height: 100,
+            bitsPerComponent: 8,
+            bytesPerRow: 100 * 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+        let dummyImage = context.makeImage()!
+        let snapshot = ScreenSnapshot(
+            screen: screen,
+            image: dummyImage,
+            frame: CGRect(x: 0, y: 0, width: 800, height: 600),
+            scaleFactor: 2.0
+        )
+
+        let overlayWindow = AreaCaptureOverlayWindow(snapshot: snapshot, primaryScreenHeight: 600)
+        XCTAssertNotNil(overlayWindow)
+        XCTAssertEqual(overlayWindow.frame.size.width, 800)
+        XCTAssertEqual(overlayWindow.frame.size.height, 600)
+        XCTAssertTrue(overlayWindow.canBecomeKey)
+        XCTAssertTrue(overlayWindow.canBecomeMain)
+    }
 }

@@ -27,6 +27,8 @@ public final class CaptureCoordinator {
         let primaryHeight = NSScreen.screens.first?.frame.height ?? 1080.0
         dismissActiveOverlays()
 
+        NSApp.activate(ignoringOtherApps: true)
+
         for snapshot in snapshots {
             let window = AreaCaptureOverlayWindow(snapshot: snapshot, primaryScreenHeight: primaryHeight)
             window.onCaptureCompleted = { [weak self] image in
@@ -34,7 +36,7 @@ public final class CaptureCoordinator {
                 guard let image = image else { return }
                 self?.handleCapturedImage(image)
             }
-            window.orderFront(nil)
+            window.makeKeyAndOrderFront(nil)
             activeOverlayWindows.append(window)
         }
     }

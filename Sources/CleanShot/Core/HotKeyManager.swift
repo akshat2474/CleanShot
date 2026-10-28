@@ -31,7 +31,7 @@ public final class HotKeyManager {
             keyCode,
             modifiers,
             hotKeyID,
-            GetEventDispatcherTarget(),
+            GetApplicationEventTarget(),
             0,
             &hotKeyRef
         )
@@ -54,7 +54,11 @@ public final class HotKeyManager {
     // MARK: - Event Dispatch
 
     fileprivate func dispatchHotKey(id: UInt32) {
-        guard let handler = handlers[id] else { return }
+        print("[HotKeyManager] Dispatching hotkey id: \(id)")
+        guard let handler = handlers[id] else {
+            print("[HotKeyManager] No handler registered for id: \(id)")
+            return
+        }
         handler()
     }
 
@@ -90,7 +94,7 @@ public final class HotKeyManager {
         }
 
         let status = InstallEventHandler(
-            GetEventDispatcherTarget(),
+            GetApplicationEventTarget(),
             handler,
             1,
             &eventType,
