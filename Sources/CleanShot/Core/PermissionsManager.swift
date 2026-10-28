@@ -30,6 +30,17 @@ public final class PermissionsManager {
 
     public func requestScreenCaptureAccess() -> Bool {
         if isScreenCaptureGranted { return true }
+
+        // Practical capability probe: can we actually capture a screen frame?
+        // On macOS Sequoia and ad-hoc builds, CGPreflightScreenCaptureAccess may return false
+        // even when screen recording is granted until full restart, but frame capture already succeeds.
+        if let screen = NSScreen.main ?? NSScreen.screens.first,
+           let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+           let testImage = CGDisplayCreateImage(displayID),
+           testImage.width > 0 {
+            return true
+        }
+
         return CGRequestScreenCaptureAccess()
     }
 
@@ -61,15 +72,27 @@ public final class PermissionsManager {
     public func showScreenCapturePermissionAlert() {
         let alert = NSAlert()
         alert.messageText = "Screen Recording Permission Required"
-        alert.informativeText = "CleanShot requires Screen Recording permission to capture screens and windows. Please grant permission in System Settings."
+        alert.informativeText = "CleanShot requires Screen Recording permission to capture screens and windows.\n\nIf you have already toggled CleanShot in System Settings, macOS requires quitting and restarting CleanShot for the new permission to apply."
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "Restart CleanShot")
         alert.addButton(withTitle: "Cancel")
 
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
             openSystemSettingsScreenRecording()
+        } else if response == .alertSecondButtonReturn {
+            relaunchApp()
         }
+    }
+
+    public func relaunchApp() {
+        let bundleURL = Bundle.main.bundleURL
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = ["-n", bundleURL.path]
+        try? process.run()
+        NSApp.terminate(nil)
     }
 
     public func openSystemSettingsScreenRecording() {
